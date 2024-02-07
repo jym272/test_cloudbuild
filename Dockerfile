@@ -6,11 +6,11 @@ WORKDIR /app
 
 FROM base as build
 
-COPY --link bun.lockb package.json ./
+COPY bun.lockb package.json ./
 
 RUN bun install --production
 
-COPY --link . .
+COPY . .
 
 RUN bun run build
 
@@ -22,7 +22,7 @@ ENV NODE_ENV=${ENVIRONMENT}
 
 USER bun
 
-COPY --link --from=build --chown=1000:1000 /app/build/ /app
-COPY --link --from=build --chown=1000:1000 /app/.env /app/.env
+COPY --from=build --chown=1000:1000 /app/build/ /app
+COPY --from=build --chown=1000:1000 /app/.env /app/.env
 
 CMD ["bun", "run", "--bun", "server.js"]
