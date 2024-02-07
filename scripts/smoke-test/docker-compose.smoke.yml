@@ -1,0 +1,31 @@
+services:
+  mongodb:
+    image: 'bitnami/mongodb:latest'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'mongosh',
+          '--quiet',
+          '--eval',
+          "'quit(db.runCommand({ ping: 1 }).ok ? 0 : 2)'",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+  rankings:
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    environment:
+      AUTH_URL: https://lab.legendaryum.com/api/auth
+      CORS_LIST: http://localhost:3000
+      MONGO_URI: mongodb://mongodb:27017/?serverSelectionTimeoutMS=2000
+      PORT: ${PORT_RANKINGS}
+      FORCE_COLOR: 3
+    ports:
+      - ${PORT_RANKINGS}:${PORT_RANKINGS}
+    restart: on-failure

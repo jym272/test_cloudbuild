@@ -1,0 +1,58 @@
+services:
+  mongodb-primary:
+    image: docker.io/bitnami/mongodb:latest
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-primary
+      - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+    volumes:
+      - 'mongodb_master_data:/bitnami/mongodb'
+    ports:
+      - 27017:27017
+    healthcheck:
+      test: |
+        mongosh -u root -p password123 --authenticationDatabase admin --quiet localhost:27017 --eval "rs.status().ok" | tail -n 1 | grep -qw '1' && mongosh -u root -p password123 --authenticationDatabase admin --quiet localhost:27017 --eval "rs.status().members[0].stateStr" | tail -n 1 | grep -qw 'PRIMARY'
+      interval: 5s
+      timeout: 3s
+      retries: 5
+  mongodb-secondary:
+    image: docker.io/bitnami/mongodb:latest
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-secondary
+      - MONGODB_REPLICA_SET_MODE=secondary
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+  mongodb-arbiter:
+    image: docker.io/bitnami/mongodb:latest
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-arbiter
+      - MONGODB_REPLICA_SET_MODE=arbiter
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+  wait-for-services-to-be-ready:
+    image: hello-world
+    depends_on:
+      mongodb-primary:
+        condition: service_healthy
+
+#  liptv:
+#    build:
+#      context: .
+#      dockerfile: dev.Dockerfile
+#    ports:
+#      - '8001'
+#    depends_on:
+#      - wait-for-services-to-be-ready
+#    env_file:
+#      - .env.docker
+
+volumes:
+  mongodb_master_data:
+    driver: local
